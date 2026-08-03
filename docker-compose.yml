@@ -1,0 +1,122 @@
+# =============================================================================
+# DEVELOPMENT compose file (the default one `docker compose up` picks up).
+#
+# Goals of this file specifically:
+#  - Hot reload for both frontend (Vite) and backend (ts-node-dev) by bind
+#    mounting source code from the host into the containers.
+#  - Fast inner-loop: no compiling to dist/, no nginx, no multi-stage builds.
+#
+# For an immutable, optimized production stack, see docker-compose.prod.yml.
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: quillpen-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres123}
+      POSTGRES_DB: ${POSTGRES_DB:-quillpen}
+    ports:
+      # host:container - lets you connect a local DB client at localhost:5432
+      # even though the backend talks to postgres over the internal network.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      # Named volume so database data survives `docker compose down` and
+      # container recreation. Only `docker compose down -v` removes it.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Confirms Postgres is actually ready to accept queries, not just that
+      # the container process has started (those are not the same moment).
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - quillpen-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: quillpen-redis
+    restart: unless-stopped
+    # appendonly yes = AOF persistence, so cached data (and the cache is only
+    # ever a performance layer, never the source of truth) survives a
+    # container restart instead of starting ice-cold every time.
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - quillpen-network
+
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    container_name: quillpen-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 5000
+      # "postgres" / "redis" below are the service names above - Docker's
+      # embedded DNS resolves them to the right container IP automatically,
+      # which is why this is different from the localhost URLs in
+      # server/.env used for running the API outside Docker.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres123}@postgres:5432/${POSTGRES_DB:-quillpen}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-my_super_secret_key_123}
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    volumes:
+      # Bind mount: edits to ./server on the host appear inside the container
+      # instantly, so ts-node-dev's watcher picks them up - no rebuild needed.
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+      - ./server/tsconfig.json:/app/tsconfig.json
+      # Anonymous volume "shadowing" trick: without this line, the bind mount
+      # above would hide the container's own /app/node_modules (installed
+      # for Linux/Alpine) behind the host's node_modules (installed for
+      # Windows/Mac/whatever host OS), which breaks native bindings. This
+      # anonymous volume takes precedence and keeps the container's own copy.
+      - /app/node_modules
+    networks:
+      - quillpen-network
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    container_name: quillpen-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+      - ./client/index.html:/app/index.html
+      - ./client/vite.config.ts:/app/vite.config.ts
+      - /app/node_modules
+    networks:
+      - quillpen-network
+
+networks:
+  quillpen-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

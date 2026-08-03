@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+
+# Development image: runs the actual Vite dev server (not nginx) so we keep
+# Hot Module Replacement. Source is bind-mounted by docker-compose.yml, this
+# image only needs node_modules pre-installed.
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 5173
+
+# --host 0.0.0.0 is required inside a container: Vite's default of
+# "localhost" only binds inside the container's own network namespace, which
+# would make it unreachable from the host machine's browser even with the
+# port published.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
