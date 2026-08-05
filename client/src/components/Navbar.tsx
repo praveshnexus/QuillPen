@@ -25,9 +25,7 @@ const Navbar = () => {
 
   const navLinkClass = (path: string) =>
     `relative text-sm font-medium transition-colors duration-200 ${
-      isActive(path)
-        ? "text-indigo-600"
-        : "text-slate-600 hover:text-slate-900"
+      isActive(path) ? "text-indigo-600" : "text-slate-600 hover:text-slate-900"
     }`;
 
   return (
@@ -78,11 +76,18 @@ const Navbar = () => {
           {user ? (
             <>
               <Link
+                to="/bookmarks"
+                className="md:hidden flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-indigo-600"
+                aria-label="Reading List"
+              >
+                <BookOpen size={20} />
+              </Link>
+              <Link
                 to="/create-post"
-                className="hidden sm:flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 sm:px-4"
               >
                 <PenSquare size={15} strokeWidth={2.5} />
-                Write
+                <span className="hidden sm:inline">Write</span>
               </Link>
 
               <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
@@ -98,7 +103,7 @@ const Navbar = () => {
               <button
                 onClick={handleLogout}
                 title="Log out"
-                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                className="flex items-center gap-1.5 rounded-lg p-2 text-sm font-medium text-slate-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 aria-label="Log out"
               >
                 <LogOut size={15} />
