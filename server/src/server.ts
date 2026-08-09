@@ -1,7 +1,5 @@
 import dotenv from "dotenv";
 dotenv.config()
-console.log("JWT_SECRET:", process.env.JWT_SECRET);
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
 import app from "./app";
 import { connectRedis } from "./config/redis";
@@ -24,10 +22,10 @@ const startServer = async () => {
 
   await connectRedis();
 
-  app.listen(PORT, () => {
-    console.log(`🌐 Server: http://localhost:${PORT}`);
-    console.log("✅ QuillPen API started successfully.\n");
-  });
+  app.listen(Number(PORT), "0.0.0.0", () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+  console.log("✅ QuillPen API started successfully.\n");
+});
 };
 
 startServer();
