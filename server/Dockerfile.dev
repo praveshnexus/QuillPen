@@ -1,26 +1,18 @@
 # syntax=docker/dockerfile:1
 
-# Single-stage image for local development. Simpler than the production
-# Dockerfile on purpose: no multi-stage build, keeps devDependencies
-# (ts-node-dev, typescript, @types/*) because we need them to run TypeScript
-# directly with hot-reload. Source code itself is NOT copied in - it is bind
-# mounted by docker-compose.yml so edits on the host are picked up instantly
-# without rebuilding the image.
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Only manifests here; actual source arrives via the compose bind mount.
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy Prisma schema
 COPY prisma ./prisma
-
-# Generate Prisma Client for Alpine
 RUN npx prisma generate
+
+# Copy application source code into the image
+COPY src ./src
 
 EXPOSE 5000
 
-# ts-node-dev watches src/ and restarts the process on file changes.
 CMD ["npm", "run", "dev"]
