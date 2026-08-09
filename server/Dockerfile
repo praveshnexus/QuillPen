@@ -84,7 +84,7 @@ EXPOSE 5000
 # response (even a 404) proves the event loop and TCP listener are up;
 # a dedicated /health route is added in Phase 3 for a more precise check.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:5000/', r => process.exit(0)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.PORT || 5000) + '/', r => process.exit(0)).on('error', () => process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]
