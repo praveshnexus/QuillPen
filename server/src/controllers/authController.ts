@@ -6,6 +6,8 @@ import generateToken from "../utils/generateToken";
 import asyncHandler from "../utils/asyncHandler";
 import { signupSchema, loginSchema } from "../validators/authValidator";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const signup = asyncHandler(async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
   const validation = signupSchema.safeParse(req.body);
@@ -42,8 +44,8 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
@@ -86,8 +88,8 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   res.cookie("token", token, {
     httpOnly: true,
-    secure: false,
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
@@ -97,7 +99,11 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  res.clearCookie("token");
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+  });
 
   res.json({
     message: "Logged out successfully",
@@ -109,6 +115,7 @@ interface AuthRequest extends Request {
     userId: string;
   };
 }
+
 export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: {
