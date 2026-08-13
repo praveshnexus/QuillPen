@@ -22,6 +22,8 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+RUN apk add --no-cache openssl
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
@@ -45,6 +47,8 @@ RUN npm run build
 # =============================================================================
 FROM node:20-alpine AS production
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 
 # dumb-init becomes PID 1 and correctly forwards SIGTERM/SIGINT to the Node
 # process, so `docker stop` / `docker compose down` trigger a clean, graceful
@@ -84,7 +88,7 @@ EXPOSE 5000
 # response (even a 404) proves the event loop and TCP listener are up;
 # a dedicated /health route is added in Phase 3 for a more precise check.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.PORT || 5000) + '/', r => process.exit(0)).on('error', () => process.exit(1))"
+CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.PORT || 5000) + '/', r => process.exit(0)).on('error', () => process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]
